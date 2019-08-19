@@ -1,0 +1,14 @@
+10 defint n: n=7
+20 defint a, b, c, i, j, t : dim a(n), b(n)
+30 begin$ = time$: for i=0 to n:a(i)=i+1:next:j=1
+40 if j<=n then b(j)=j:goto 90
+50 c=c+1: rem ? c;">"; : for i=0 to n:print a(i);:next:print
+60 j=j-1
+70 if b(j)=n then t=a(j):for i=j to n-1: a(i)=a(i+1): next: a(n)=t: if j>0 then 60 else goto 160
+80 b(j) = b(j)+1:t=a(j):a(j)=a(b(j)):a(b(j))=t
+90 if j = 0 then 150
+110 for i = 0 to j-1
+130 if a(i) - a(j) = j-i or a(j)-a(i) = j-i then 70
+140 next
+150 j=j+1: goto 40
+160 ? begin$, time$, c
