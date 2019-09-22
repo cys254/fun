@@ -83,24 +83,25 @@ struct test_item {
 
 void do_test()
 {
-    int i,j;
+    int i;
     for (i=0;i<NUM_OF_TESTS;i++) {
         struct timeval begin, end;
         struct rusage be,en;
+        int count, j;
+        float diffu, diffs;
         gettimeofday(&begin, 0);
         for (j=0;j<10000;j++) {
             tests[i].test();
             gettimeofday(&end, 0);
-            int d=(end.tv_sec-begin.tv_sec)*1000000+(end.tv_usec-begin.tv_usec);
-            if (d > 1000000) break;
+            if ((end.tv_sec-begin.tv_sec)*1000000+(end.tv_usec-begin.tv_usec) > 1000000) break;
         }
-        int count=j*10;
+        count=(j+1)*10;
         getrusage(RUSAGE_SELF, &be);
         for (j=0;j<count;j++) tests[i].test();
         getrusage(RUSAGE_SELF, &en);
-        float diffu=(en.ru_utime.tv_sec-be.ru_utime.tv_sec)+1e-6*(en.ru_utime.tv_usec-be.ru_utime.tv_usec);
-        float diffs=(en.ru_stime.tv_sec-be.ru_stime.tv_sec)+1e-6*(en.ru_stime.tv_usec-be.ru_stime.tv_usec);
-        printf("%4s: %10d %.3e %.3e~%.3e\n", tests[i].test_name,count,N*count/(diffu+diffs),diffu/N/count,diffs/N/count);
+        diffu=(en.ru_utime.tv_sec-be.ru_utime.tv_sec)+1e-6*(en.ru_utime.tv_usec-be.ru_utime.tv_usec);
+        diffs=(en.ru_stime.tv_sec-be.ru_stime.tv_sec)+1e-6*(en.ru_stime.tv_usec-be.ru_stime.tv_usec);
+        printf("%4s: %10d %6.3f %.3e %.3e~%.3e\n", tests[i].test_name,count,(diffu+diffs), N*count/(diffu+diffs),diffu/N/count,diffs/N/count);
     }
 }
 
