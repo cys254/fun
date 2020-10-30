@@ -26,14 +26,14 @@ struct permute_data {
     int a[N];
     int n;
     int conflictMap[N][N];
+    int mt;
 };
 
-#ifdef MT
+extern void permute0_mt(int a[], int n, int conflictMap[N][N]);
 extern pthread_t permute_mt(int a[], int n, int conflictMap[N][N]);
 extern void *permute_func(void *arg);
-#endif
 
-int main()
+int main(int argc, char** argv)
 {
     int i, a[N], j, err;
     struct permute_data data;
@@ -43,7 +43,9 @@ int main()
     data.n = N;
     for (i=0;i<N;i++) data.a[i] = i;
     memset(data.conflictMap, 0, sizeof(data.conflictMap));
-    
+
+    if (argc > 1 && strcmp(argv[1],"-mt") == 0) data.mt = 1;
+    else data.mt = 0;
     
     pthread_create(&thread, 0, permute0_func, &data);
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -73,7 +75,8 @@ void print_result(int a[], int n) {
 
 void *permute0_func(void *arg) {
     struct permute_data *data = (struct permute_data *)arg;
-    permute0(data->a, data->n, data->conflictMap);
+    if (data->mt) permute0_mt(data->a, data->n, data->conflictMap);
+    else permute0(data->a, data->n, data->conflictMap);
     pthread_mutex_lock(&lock);
     pthread_cond_broadcast(&done);
     pthread_mutex_unlock(&lock);
@@ -82,37 +85,39 @@ void *permute0_func(void *arg) {
 
 void permute0(int a[], int n, int conflictMap[N][N]) {
     int i, t;
-#ifdef MT
-    pthread_t threads[N-1];
-#endif
 #ifdef COUNT_OPERATIONS
     permute_count++;
 #endif
-
  
-#ifdef MT
-    threads[0] = permute_mt(a, n, conflictMap);
-#else
     permute(a, 1, n, conflictMap);
-#endif
     for (i=1;i<n;i++) {
 #ifdef COUNT_OPERATIONS
         rotate_count++;
 #endif
         t = a[0]; a[0] = a[i]; a[i] = t;
-#ifdef MT
-        if (i != n-1) threads[i] = permute_mt(a, n, conflictMap);
-        else permute(a, 1, n, conflictMap);
-#else
         permute(a, 1, n, conflictMap);
-#endif
     }
-#ifdef MT
-    for (i=0;i<n-1;i++) pthread_join(threads[i], 0);
-#endif
 }
 
-#ifdef MT
+void permute0_mt(int a[], int n, int conflictMap[N][N]) {
+    int i, t;
+    pthread_t threads[N-1];
+#ifdef COUNT_OPERATIONS
+    permute_count++;
+#endif
+
+    threads[0] = permute_mt(a, n, conflictMap);
+    for (i=1;i<n;i++) {
+#ifdef COUNT_OPERATIONS
+        rotate_count++;
+#endif
+        t = a[0]; a[0] = a[i]; a[i] = t;
+        if (i != n-1) threads[i] = permute_mt(a, n, conflictMap);
+        else permute(a, 1, n, conflictMap);
+    }
+    for (i=0;i<n-1;i++) pthread_join(threads[i], 0);
+}
+
 pthread_t permute_mt(int a[], int n, int conflictMap[N-1][N]) {
     int i, j, err;
     pthread_t thread;
@@ -132,7 +137,6 @@ void *permute_func(void *arg) {
     permute(data->a, 1, data->n, data->conflictMap);
     return 0;
 }
-#endif
 
 void permute(int a[], int j, int n, int conflictMap[N][N]) {
     int j1 = j-1;
@@ -141,16 +145,12 @@ void permute(int a[], int j, int n, int conflictMap[N][N]) {
 #endif
     if (j == n - 1) {
         if (conflictMap[j1][a[j]] == 0 && a[j] != a[j1]+1 && a[j] != a[j1]-1) {
-#ifdef MT
             pthread_mutex_lock(&lock);
-#endif
             solution_count++;
 #ifdef PRINT_RESULT
             print_result(a, n);
 #endif
-#ifdef MT
             pthread_mutex_unlock(&lock);
-#endif
         }
     } else {
         int i,t;
